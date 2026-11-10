@@ -172,11 +172,84 @@ class CarparkService {
     return this.carparks.find((cp) => cp.id === id);
   }
 
-  // Simulate real-time lot changes (mimicking cars entering & exiting)
-  // When user is ready to connect real backend, this is where the fetch('/api/carparks/live') is hooked!
-  public refreshLiveLots(): Carpark[] {
+  // Check serverless backend health and LTA key configuration
+  public async checkBackendHealth(): Promise<{
+    configured: boolean;
+    service: string;
+    message?: string;
+  }> {
+    try {
+      const res = await fetch('/api/health');
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          configured: Boolean(data.ltaDatamallConfigured),
+          service: data.service,
+        };
+      }
+    } catch {
+      // Backend not reached or offline
+    }
+    return { configured: false, service: 'Local Standalone' };
+  }
+
+  // Refresh carpark lots by calling serverless /api/carparkavailability
+  // If LTA key is configured, pulls live LTA DataMall data.
+  // If not yet configured, gracefully applies realistic live fluctuation.
+  public async refreshLiveLots(): Promise<Carpark[]> {
+    try {
+      const res = await fetch('/api/carparkavailability');
+      if (res.ok) {
+        const data = await res.json();
+
+        // If backend returned live LTA records, merge lots
+        if (data.status === 'success' && Array.isArray(data.value) && data.value.length > 0) {
+          const ltaRecords: Array<{
+            CarParkID: string;
+            Development: string;
+            AvailableLots: number;
+            LotType: string;
+          }> = data.value;
+
+          const ltaMap = new Map<string, number>();
+          ltaRecords.forEach((r) => {
+            const key = `${r.CarParkID}_${r.LotType}`;
+            ltaMap.set(key, r.AvailableLots);
+          });
+
+          this.carparks = this.carparks.map((cp) => {
+            const liveCarLots = ltaMap.get(`${cp.carparkNo}_C`);
+            const liveMotorLots = ltaMap.get(`${cp.carparkNo}_Y`);
+            const liveHeavyLots = ltaMap.get(`${cp.carparkNo}_H`);
+
+            const newCarAvail = liveCarLots !== undefined ? liveCarLots : cp.lots.car.available;
+            const newMotorAvail = liveMotorLots !== undefined ? liveMotorLots : cp.lots.motorcycle.available;
+            const newHeavyAvail = liveHeavyLots !== undefined ? liveHeavyLots : cp.lots.heavyVehicle.available;
+
+            const carTotal = cp.lots.car.total;
+            const newOcc = Math.round(((carTotal - newCarAvail) / carTotal) * 100);
+
+            return {
+              ...cp,
+              lots: {
+                car: { ...cp.lots.car, available: newCarAvail },
+                motorcycle: { ...cp.lots.motorcycle, available: newMotorAvail },
+                heavyVehicle: { ...cp.lots.heavyVehicle, available: newHeavyAvail },
+              },
+              occupancyRate: Math.max(0, Math.min(100, newOcc)),
+              lastUpdated: new Date().toISOString(),
+            };
+          });
+
+          return [...this.carparks];
+        }
+      }
+    } catch (err) {
+      console.warn('Live API request failed, falling back to simulated live flux:', err);
+    }
+
+    // Fallback: simulated live flux
     this.carparks = this.carparks.map((cp) => {
-      // 70% chance of small lot variation (+/- 1 to 5 lots)
       const deltaCar = Math.floor(Math.random() * 9) - 4;
       const newCarAvail = Math.max(0, Math.min(cp.lots.car.total, cp.lots.car.available + deltaCar));
 

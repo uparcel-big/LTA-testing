@@ -89,10 +89,10 @@ export default function App() {
     return () => clearInterval(timer);
   }, [userLocation]);
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      const updated = carparkService.refreshLiveLots();
+    try {
+      const updated = await carparkService.refreshLiveLots();
       setCarparks(
         userLocation
           ? updated.map((cp) => ({
@@ -104,8 +104,9 @@ export default function App() {
           : [...updated]
       );
       setLastUpdated(new Date().toISOString());
+    } finally {
       setIsRefreshing(false);
-    }, 400);
+    }
   }, [userLocation]);
 
   // User GPS Geolocation handler
