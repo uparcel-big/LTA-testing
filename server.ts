@@ -4,6 +4,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import healthHandler from './api/health.ts';
 import carparkAvailabilityHandler from './api/carparkavailability.ts';
+import oneMapTokenHandler from './api/onemap/token.ts';
+import oneMapSearchHandler from './api/onemap/search.ts';
+import oneMapRevGeocodeHandler from './api/onemap/revgeocode.ts';
+import oneMapRouteHandler from './api/onemap/route.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +30,35 @@ app.all('/api/carparkavailability', (req: Request, res: Response) => {
 // Alias to handle potential typo '/api/arparkavailability'
 app.all('/api/arparkavailability', (req: Request, res: Response) => {
   return carparkAvailabilityHandler(req, res);
+});
+
+// OneMap Routes
+app.all('/api/onemap/token', (req: Request, res: Response) => {
+  return oneMapTokenHandler(req, res);
+});
+app.all('/api/onemap-token', (req: Request, res: Response) => {
+  return oneMapTokenHandler(req, res);
+});
+
+app.all('/api/onemap/search', (req: Request, res: Response) => {
+  return oneMapSearchHandler(req, res);
+});
+app.all('/api/onemap-search', (req: Request, res: Response) => {
+  return oneMapSearchHandler(req, res);
+});
+
+app.all('/api/onemap/revgeocode', (req: Request, res: Response) => {
+  return oneMapRevGeocodeHandler(req, res);
+});
+app.all('/api/onemap-revgeocode', (req: Request, res: Response) => {
+  return oneMapRevGeocodeHandler(req, res);
+});
+
+app.all('/api/onemap/route', (req: Request, res: Response) => {
+  return oneMapRouteHandler(req, res);
+});
+app.all('/api/onemap-route', (req: Request, res: Response) => {
+  return oneMapRouteHandler(req, res);
 });
 
 async function startServer() {
