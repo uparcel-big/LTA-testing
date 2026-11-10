@@ -1,0 +1,6 @@
+{
+  "name": "SG ParkLive - Real-Time Singapore Carpark Lots Tracker",
+  "description": "Live Singapore carpark lots availability tracker for HDB, URA, shopping malls, and commercial buildings with interactive map, clearance filters, and parking fee calculator.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
